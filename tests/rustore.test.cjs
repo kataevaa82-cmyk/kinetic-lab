@@ -5,8 +5,48 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 
+const zlib = require('node:zlib');
+
 const root = path.join(__dirname, '..');
 const read = name => fs.readFileSync(path.join(root, name), 'utf8');
+
+// Decodes an 8-bit RGBA PNG far enough to read single pixels back.
+function decodePng(file) {
+  const buffer = fs.readFileSync(file);
+  assert.equal(buffer.slice(1, 4).toString(), 'PNG', `${file} is not a PNG`);
+  const width = buffer.readUInt32BE(16), height = buffer.readUInt32BE(20);
+  assert.equal(buffer[24], 8, `${file} is not 8 bits per channel`);
+  assert.equal(buffer[25], 6, `${file} is not truecolour with alpha`);
+  const parts = [];
+  for (let at = 8; at < buffer.length;) {
+    const length = buffer.readUInt32BE(at);
+    const name = buffer.slice(at + 4, at + 8).toString('ascii');
+    if (name === 'IDAT') parts.push(buffer.slice(at + 8, at + 8 + length));
+    at += length + 12;
+  }
+  const raw = zlib.inflateSync(Buffer.concat(parts));
+  const stride = width * 4;
+  const pixels = Buffer.alloc(height * stride);
+  for (let y = 0; y < height; y++) {
+    const filter = raw[y * (stride + 1)];
+    const line = raw.slice(y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);
+    for (let x = 0; x < stride; x++) {
+      const a = x >= 4 ? pixels[y * stride + x - 4] : 0;
+      const b = y > 0 ? pixels[(y - 1) * stride + x] : 0;
+      const c = x >= 4 && y > 0 ? pixels[(y - 1) * stride + x - 4] : 0;
+      let value = line[x];
+      if (filter === 1) value += a;
+      else if (filter === 2) value += b;
+      else if (filter === 3) value += (a + b) >> 1;
+      else if (filter === 4) {
+        const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+        value += pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
+      }
+      pixels[y * stride + x] = value & 0xff;
+    }
+  }
+  return {width, height, alphaAt: (x, y) => pixels[y * stride + x * 4 + 3]};
+}
 
 // Minimal reader for the Godot ini dialect: sections plus `key=value` lines.
 function sections(text) {
@@ -87,4 +127,15 @@ test('the Yandex web preset is untouched by the store build', () => {
   assert.ok(web, 'the portal preset disappeared');
   assert.equal(web.platform, 'Web');
   assert.equal(web.export_path, 'build/web/index.html');
+});
+
+test('the store listing icon is 512x512 and opaque to the edge', () => {
+  // RuStore rejects an icon whose contour has transparent or unfilled areas, which
+  // rules out the rounded plate the launcher icon uses.
+  const icon = decodePng(path.join(root, 'assets/android/store-icon-512.png'));
+  assert.equal(icon.width, 512);
+  assert.equal(icon.height, 512);
+  for (const [x, y] of [[0, 0], [511, 0], [0, 511], [511, 511], [255, 0], [0, 255]]) {
+    assert.equal(icon.alphaAt(x, y), 255, `pixel ${x},${y} is not opaque`);
+  }
 });

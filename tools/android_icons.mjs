@@ -161,11 +161,13 @@ function drawGlyph(canvas, scale, ox, oy, override) {
   }
 }
 
-// Full icon: the rounded plate of the SVG plus the robot, edge to edge.
-function plate(size) {
+// Full icon: the plate of the SVG plus the robot, edge to edge. The store listing
+// icon is square on purpose: RuStore rejects an icon with transparent corners, so
+// only the launcher icon keeps the rounded plate.
+function plate(size, rounded) {
   const canvas = new Canvas(size);
   const scale = canvas.w / 256;
-  canvas.rect(0, 0, canvas.w, canvas.w, 56 * scale, PLATE);
+  canvas.rect(0, 0, canvas.w, canvas.w, rounded ? 56 * scale : 0, PLATE);
   drawGlyph(canvas, scale, 0, 0, null);
   return png(size, canvas.resolve());
 }
@@ -186,11 +188,11 @@ function adaptive(size, override, background) {
 
 mkdirSync(out, {recursive: true});
 const files = [
-  ['icon-192.png', plate(192)],
+  ['icon-192.png', plate(192, true)],
   ['icon-foreground-432.png', adaptive(432, null, null)],
   ['icon-background-432.png', (() => { const c = new Canvas(432); c.rect(0, 0, c.w, c.w, 0, PLATE); return png(432, c.resolve()); })()],
   ['icon-monochrome-432.png', adaptive(432, '#ffffff', null)],
-  ['store-icon-512.png', plate(512)]
+  ['store-icon-512.png', plate(512, false)]
 ];
 for (const [name, data] of files) {
   writeFileSync(join(out, name), data);
