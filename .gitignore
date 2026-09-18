@@ -3,3 +3,8 @@ build/
 node_modules/
 artifacts/
 *.tmp
+
+# Подпись Android-сборки хранится вне репозитория.
+export_credentials.cfg
+*.keystore
+*.jks

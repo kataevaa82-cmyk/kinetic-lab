@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "Build and browser verification tools for the Godot game",
-  "scripts": {"serve": "node tools/serve.mjs", "test:bridge": "node --test tests/bridge.test.cjs", "test:web": "node tests/browser.mjs"},
+  "scripts": {"serve": "node tools/serve.mjs", "test:bridge": "node --test tests/bridge.test.cjs", "test:rustore": "node --test tests/rustore.test.cjs", "test:web": "node tests/browser.mjs"},
   "devDependencies": {"playwright": "^1.58.2"}
 }

@@ -655,6 +655,9 @@ func _menu() -> void:
 			LabArt.box(self,r,Color("24453f") if i in game.completed else Color("1c2e3a"),5)
 			center(r,str(i+1),11,LabArt.TEAL if i in game.completed else Color("637c8c"))
 	txt(Vector2(x+30,footer_y+4),trr("8 открытий  ·  бесконечные возможности","8 discoveries  ·  endless possibilities"),10,LabArt.MUTED)
+	# Магазинной сборке нужен явный выход; во вкладке браузера кнопки быть не должно.
+	if game.platform.can_quit():
+		button("exit",Rect2(x+mw-266,footer_y-15,80,33),trr("Выход","Exit"),false,true,LabArt.RED)
 	button("help",Rect2(x+mw-178,footer_y-15,100,33),trr("Как играть","How to play"),false,true)
 	button("lang",Rect2(x+mw-72,footer_y-15,42,33),"RU" if game.lang=="ru" else "EN",false,true)
 	if not game.mobile:

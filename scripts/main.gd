@@ -480,6 +480,8 @@ var autosave_timer=0.0
 var elapsed=0.0
 var toast=""
 var toast_time=0.0
+# Окно подтверждения выхода по кнопке «Назад» на Android.
+var back_prompt=0.0
 var stats: Dictionary={}
 var completed: Array=[]
 var cached_scene: Dictionary={}
@@ -496,6 +498,8 @@ func _ready() -> void:
 	add_child(platform)
 	platform.state_changed.connect(_platform_changed)
 	platform.ad_finished.connect(_finish_scene_change)
+	platform.back_requested.connect(_on_back_requested)
+	platform.quit_requested.connect(quit_game)
 	mobile=platform.mobile or "--mobile-test" in OS.get_cmdline_user_args()
 	if mobile:
 		get_tree().root.content_scale_size=Vector2i(854,480)
@@ -615,6 +619,32 @@ func next_id() -> int:
 	counter+=1
 	return counter
 
+func _on_back_requested() -> void:
+	# Android: «Назад» закрывает подсказку, отменяет размещение и возвращает в меню,
+	# а из самого меню выходит из игры по второму нажатию подряд.
+	if help_open:
+		help_open=false
+		_update_pause()
+	elif placing:
+		placing=false
+		tool="grab"
+	elif not menu_open:
+		save_snapshot(false)
+		menu_open=true
+		release_drag()
+		_update_pause()
+	elif back_prompt>0.0:
+		quit_game()
+	else:
+		back_prompt=2.5
+		notify(t("Нажми «Назад» ещё раз, чтобы выйти","Press Back again to exit"))
+
+func quit_game() -> void:
+	# Закрытие окна и кнопка «Выход»: сцена и прогресс сохраняются до выхода.
+	if not menu_open: save_snapshot(false)
+	save_progress()
+	get_tree().quit()
+
 func _platform_changed() -> void:
 	if not is_instance_valid(world): return
 	_apply_language()
@@ -633,6 +663,7 @@ func _update_pause() -> void:
 func _process(delta: float) -> void:
 	var real_delta=delta/Engine.time_scale
 	toast_time=maxf(0,toast_time-real_delta)
+	back_prompt=maxf(0,back_prompt-real_delta)
 	cursor=get_global_mouse_position()
 	fire_timer=maxf(0,fire_timer-delta)
 	if not get_tree().paused:
@@ -859,7 +890,7 @@ func action(id: String) -> void:
 		return
 	if id.begins_with("scene:"):
 		pending_scene=id.trim_prefix("scene:")
-		if elapsed>45:
+		if elapsed>45 and platform.has_ads():
 			save_snapshot(false)
 			_update_pause()
 			platform.show_ad()
@@ -881,6 +912,7 @@ func action(id: String) -> void:
 				b.gravity_scale=0.0 if is_instance_valid(b.holder) else (b.gravity_factor if gravity else 0.0)
 		"mute": muted=not muted; _update_pause(); save_progress()
 		"lang": toggle_language()
+		"exit": quit_game()
 		"help": help_open=not help_open; _update_pause()
 		"catalog": catalog_open=not catalog_open
 		"save": save_snapshot(true)

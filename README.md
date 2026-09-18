@@ -65,7 +65,7 @@
 Крепления сохраняются вместе со сценой. Логика и рисунки — `scripts/parts.gd`.
 ## Запуск
 
-Откройте `project.godot` в **Godot 4.7.1** и нажмите **F6/F5** (основная сцена — `scenes/main.tscn`). Веб-сборка лежит в `build/web`, архив для Яндекс Игр — `build/kinetic-lab-yandex.zip`.
+Откройте `project.godot` в **Godot 4.7.1** и нажмите **F6/F5** (основная сцена — `scenes/main.tscn`). Веб-сборка лежит в `build/web`, архив для Яндекс Игр — `build/kinetic-lab-yandex.zip`, пакет для RuStore — `build/rustore/KineticLab.apk`.
 
 Для локального браузерного запуска достаточно Node.js:
 
@@ -118,16 +118,27 @@ npm.cmd run test:web
 
 Отдельная проверка повреждений и падений роботов: `godot_console --headless --path . --script res://tests/robot_physics.gd`. Она проверяет приземления, опору на платформы, покой и пробуждение тел, отрыв и ремонт деталей, оружие и сохранения. Проверка также включена в `build.ps1`.
 
+Сборка для RuStore — отдельный пресет `RuStore Android` того же проекта:
+
+```powershell
+node tools/android_icons.mjs
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/build_rustore.ps1
+```
+
+Нужны Android export templates, Android SDK с `build-tools`, JDK 17 и ключ подписи в переменных окружения `GODOT_ANDROID_KEYSTORE_RELEASE_*`. Ключ подписи и `export_credentials.cfg` в репозиторий не попадают. `npm.cmd run test:rustore` проверяет пресет отдельно: подпись, отсутствие разрешений, 64-битную архитектуру, ориентацию, версию и иконки запуска.
+
 `build.ps1` импортирует ресурсы, проверяет физику и мост SDK, экспортирует однопоточную Web-сборку и создаёт ZIP с `index.html` в корне. `tests/browser.mjs` проверяет реальный Godot/WebAssembly в Chromium (Edge): запуск, управление, сохранения, перезагрузку, паузы SDK, размеры экрана и мобильную ориентацию. Изображения проверки сохраняются в `artifacts`.
 
-Инструкция публикации, тексты карточки и границы проверки: **[docs/yandex-release.md](docs/yandex-release.md)**. Архив не отправлялся на модерацию; реальную рекламу и поведение на физических устройствах нужно проверить в черновике платформы.
+Инструкция публикации, тексты карточки и границы проверки: **[docs/yandex-release.md](docs/yandex-release.md)** для Яндекс Игр и **[docs/rustore-release.md](docs/rustore-release.md)** для RuStore. Архив не отправлялся на модерацию; реальную рекламу и поведение на физических устройствах нужно проверить в черновике платформы.
 
 ## Структура
 
 - `scripts/main.gd` — взаимодействия, сцены, сохранения, звук, самопроверка.
 - `scripts/body.gd`, `robot.gd` — физические тела и сочленения робота.
 - `scripts/art.gd`, `arena.gd`, `effects.gd`, `hud.gd` — рисунки, лаборатория, эффекты, интерфейс.
-- `scripts/platform.gd`, `web/bridge.js` — мост Godot ↔ SDK Яндекс Игр.
+- `scripts/platform.gd` — платформенный слой: портал Яндекс Игр, RuStore и запуск с рабочего стола.
+- `web/bridge.js` — мост Godot ↔ SDK Яндекс Игр; в сборке для RuStore не участвует.
+- `tools/android_icons.mjs`, `assets/android/` — иконки запуска Android из геометрии `assets/icon.svg`.
 - `web/shell.html` — загрузчик, размер canvas и поворот мобильного экрана.
 
 Графика и эффекты нарисованы программно. Шрифты DejaVu распространяются с `assets/FONT-LICENSE.txt`; Godot — по лицензии MIT.
