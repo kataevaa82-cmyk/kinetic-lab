@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#0c121b">
+  <title>Kinetic Lab</title>
+  <style>
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; overscroll-behavior:none; touch-action:none; user-select:none; -webkit-user-select:none; background:#0c121b; color:#e1edf0; font-family:system-ui,sans-serif; }
+    body { display:flex; align-items:center; justify-content:center; }
+    #frame { width:min(100vw,200vh); height:100%; position:relative; overflow:hidden; background:#101b26; }
+    canvas { display:block; width:100%; height:100%; outline:none; touch-action:none; }
+    #loading, #rotate { position:absolute; inset:0; display:flex; flex-direction:column; justify-content:center; align-items:center; background:radial-gradient(ellipse at center,#1c343d,#0c121b 75%); z-index:3; gap:18px; text-align:center; padding:24px; }
+    #loading strong { letter-spacing:5px; font-size:clamp(22px,5vw,36px); }
+    #loading-label { color:#8396a7; font-size:14px; }
+    .logo { width:84px; height:84px; border:1px solid #355a59; border-radius:22px; background:#1f3b38; display:grid; place-items:center; color:#4ce0bd; font-size:48px; font-weight:700; }
+    .track { width:220px; height:4px; border-radius:8px; background:#243742; overflow:hidden; }
+    #progress { height:100%; width:0%; background:#4ce0bd; transition:width .2s; }
+    #rotate { display:none; z-index:4; }
+    #rotate .phone { font-size:58px; color:#4ce0bd; }
+    #rotate-detail { color:#8396a7; max-width:280px; line-height:1.5; }
+    .portrait #rotate { display:flex; }
+    #retry { display:none; border:1px solid #4ce0bd; border-radius:8px; padding:12px 24px; background:#23423e; color:#e1edf0; font:inherit; cursor:pointer; }
+  </style>
+  $GODOT_HEAD_INCLUDE
+  <script src="bridge.js"></script>
+  <script async src="/sdk.js" onload="KineticBridge.init()"></script>
+</head>
+<body>
+  <main id="frame">
+    <canvas id="canvas" tabindex="0" aria-label="Kinetic Lab"></canvas>
+    <div id="loading"><div class="logo">K</div><strong>KINETIC LAB</strong><span id="loading-label">Собираем лабораторию</span><div class="track"><div id="progress"></div></div><button id="retry" onclick="location.reload()">↻</button></div>
+    <div id="rotate"><div class="phone">↻</div><strong id="rotate-label">Поверни устройство горизонтально</strong><span id="rotate-detail">Для экспериментов нужно чуть больше места</span></div>
+    <script>KineticBridge.localizePage();</script>
+  </main>
+  <script src="$GODOT_URL"></script>
+  <script>
+    const canvas = document.getElementById('canvas');
+    const frame = document.getElementById('frame');
+    const resizeCanvas = () => {
+      const ratio = Math.min(devicePixelRatio || 1, 2);
+      canvas.width = Math.round(frame.clientWidth * ratio);
+      canvas.height = Math.round(frame.clientHeight * ratio);
+    };
+    resizeCanvas();
+    new ResizeObserver(resizeCanvas).observe(frame);
+    const engine = new Engine($GODOT_CONFIG);
+    engine.startGame({
+      canvas: document.getElementById('canvas'),
+      canvasResizePolicy: 0,
+      onProgress(current, total) {
+        if (total) document.getElementById('progress').style.width = `${Math.min(100,current/total*100)}%`;
+      }
+    }).then(() => {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('canvas').focus({preventScroll:true});
+      KineticBridge.loaderHidden();
+    }).catch(() => {
+      document.getElementById('loading-label').textContent = document.documentElement.lang === 'ru' ? 'Не удалось открыть лабораторию. Попробуй ещё раз.' : 'Could not open the laboratory. Please try again.';
+      document.getElementById('retry').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
